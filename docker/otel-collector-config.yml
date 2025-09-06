@@ -1,0 +1,28 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+processors:
+  batch:
+  memory_limiter:
+    limit_mib: 512
+    spike_limit_mib: 128
+    check_interval: 5s
+
+exporters:
+  logging:
+    logLevel: info
+  # (선택) Grafana Tempo로 전송하려면 활성화
+  # otlp/tempo:
+  #   endpoint: http://tempo:4317
+  #   tls:
+  #     insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [logging]  # 필요 시 [logging, otlp/tempo]

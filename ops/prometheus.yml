@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: 'careroad-api'
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['careroad-api:8080']  # compose 서비스명:포트

@@ -1,0 +1,79 @@
+name: Docker (GHCR) Build & Push
+
+on:
+  push:
+    branches: [ "main" ]           # main 푸시 시
+    tags: [ "v*" ]                 # v* 태그 푸시 시 (예: v1.2.3)
+    paths:
+      - "Dockerfile"
+      - "src/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle/**"
+      - "docker-compose.yml"
+      - ".github/workflows/docker-ghcr.yml"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }} # ghcr.io/<owner>/<repo>
+  # 이미지가 레포 루트일 때 Dockerfile 기준. 서브디렉이면 context 변경 필요.
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # GHCR 푸시 권한
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha
+            type=semver,pattern={{version}}
+
+      # 먼저 Gradle 빌드(멀티스테이지 Dockerfile이면 스킵 가능)
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build JAR (skip tests)
+        run: ./gradlew bootJar -x test --no-daemon
+
+      - name: Build & Push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

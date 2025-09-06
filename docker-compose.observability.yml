@@ -1,0 +1,27 @@
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:0.103.0
+    command: ["--config=/etc/otel/config.yml"]
+    volumes:
+      - ./docker/otel-collector-config.yml:/etc/otel/config.yml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+  tempo:
+    image: grafana/tempo:2.6.0
+    command: ["-config.file=/etc/tempo/config.yml"]
+    volumes:
+      - ./docker/tempo.yml:/etc/tempo/config.yml:ro
+    ports:
+      - "3200:3200"  # query
+      - "4317:4317"  # OTLP gRPC
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - tempo

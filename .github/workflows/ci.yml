@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+    paths:
+      - "src/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - "src/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle/**"
+      - ".github/workflows/ci.yml"
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Show versions
+        run: |
+          ./gradlew --version
+          java -version
+
+      # 필요 시 테스트에서 Testcontainers 사용 → GitHub Hosted Runner는 Docker 포함
+      - name: Run tests
+        run: ./gradlew clean test --no-daemon
+
+      # JaCoCo 리포트(옵션): build.gradle에 jacoco 플러그인 추가 시
+      - name: Generate coverage report
+        run: ./gradlew jacocoTestReport --no-daemon || true
+
+      - name: Build JAR (skip tests)
+        run: ./gradlew bootJar -x test --no-daemon
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/test
+            build/test-results/test
+
+      - name: Upload coverage (JaCoCo)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: |
+            build/reports/jacoco/test/html
+            build/reports/jacoco/test/jacocoTestReport.xml
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: build/libs/*.jar

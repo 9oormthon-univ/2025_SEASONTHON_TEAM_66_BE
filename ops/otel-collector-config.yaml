@@ -1,0 +1,26 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+      grpc:
+
+exporters:
+  # 디버깅용 로그로 export
+  logging:
+    loglevel: info
+
+  # Tempo 로 traces 전송
+  otlp/tempo:
+    endpoint: http://tempo:4317
+    tls:
+      insecure: true
+
+processors:
+  batch: {}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [logging, otlp/tempo]

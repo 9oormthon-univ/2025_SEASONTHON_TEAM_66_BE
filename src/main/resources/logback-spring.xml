@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true">
+
+    <!-- PII 마스킹 필터: com.goormthon.careroad.common.logging.PiiMaskingTurboFilter 가 실제로 존재/컴파일될 때만 주석 해제 -->
+    <!-- <turboFilter class="com.goormthon.careroad.common.logging.PiiMaskingTurboFilter"/> -->
+
+    <!-- spring.application.name → JSON 필드 app 으로 추가 -->
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="careroad-api"/>
+
+    <!-- JSON 콘솔 -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- logstash-logback-encoder 7.x 기준: 커스텀 provider 클래스 지정 없이 사용 -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- 고정 필드 (서비스명 등) -->
+            <customFields>{"app":"${appName}"}</customFields>
+
+            <!-- 메시지에 MDC 전송을 원한다면(예: traceId, spanId, requestId),
+                 애플리케이션 코드 측에서 MDC에 put 해두면 기본 포함됩니다.
+                 특정 키만 보내고 싶다면 PII 이슈 없는 범위에서 필터에서 제거/마스킹 권장 -->
+        </encoder>
+    </appender>
+
+    <!-- 루트 로그 레벨 및 라우팅 -->
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+
+    <!-- noisy 패키지 조정 -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.flywaydb" level="INFO"/>
+    <logger name="io.micrometer" level="INFO"/>
+
+</configuration>

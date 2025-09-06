@@ -1,0 +1,93 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: careroad-api
+
+  # === Primary DB: PostgreSQL ===
+  datasource:
+    url: ${PG_URL:jdbc:postgresql://localhost:5432/careapp}
+    username: ${PG_USER:careuser}
+    password: ${PG_PASS:carepass}
+    hikari:
+      maximum-pool-size: 15
+      minimum-idle: 3
+      connection-timeout: 15000
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+      hibernate.format_sql: true
+      hibernate.show_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration  # V1__*.sql, V2__*.sql ...
+
+# === JWT / Security ===
+app:
+  jwt:
+    issuer: ${JWT_ISSUER:careroad.dev}
+    kid: ${JWT_KID:dev-key-1}
+    access-min: ${JWT_ACCESS_MIN:15}     # access token TTL (minutes)
+    refresh-days: ${JWT_REFRESH_DAYS:14} # refresh token TTL (days)
+    # TokenService가 Spring Resource로 읽습니다. file: 또는 classpath: 모두 지원.
+    private-key-pem: ${JWT_PRIVATE_PEM:classpath:keys/jwt-private.pem}
+    public-key-pem:  ${JWT_PUBLIC_PEM:classpath:keys/jwt-public.pem}
+
+  crypto:
+    key-base64: ${APP_CRYPTO_KEY:}
+
+# === Actuator / Metrics / Tracing ===
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,loggers,env,threaddump,heapdump
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      env: ${APP_ENV:local}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms,250ms,500ms,1s,2s,5s
+  tracing:
+    enabled: true
+    sampling:
+      probability: ${OTEL_TRACES_SAMPLER_ARG:0.2} # 20% 샘플링
+
+# Micrometer → OTEL Collector(HTTP/4318)
+management.otlp.tracing:
+  endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}
+  transport: http
+
+# === springdoc-openapi (Swagger UI) ===
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
+# === 로깅 (세부 레벨 조정) ===
+logging:
+  level:
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO
+    com.zaxxer.hikari: INFO

@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:careroad;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate.format_sql: true
+      hibernate.show_sql: false
+
+  # 테스트에서는 Flyway 끔 (DDL은 JPA가 처리)
+  flyway:
+    enabled: false
+
+# 보안/외부 연동/관측 등 선택 기능은 테스트에서 OFF
+management:
+  endpoints.web.exposure.include: health,info
+  tracing.enabled: false
+  otlp.metrics.export.enabled: false
+  otlp.tracing.endpoint: ""
+  otlp.logs.endpoint: ""
+
+app:
+  nhis:
+    enabled: false      # NHIS 클라이언트 등 외부 호출 비활성화
+  redis:
+    enabled: false      # Redis 사용 시 선택 기능 비활성화 플래그 (있다면)
+  jwt:
+    issuer: test.issuer
+    kid: test-kid
+    access-min: 15
+    refresh-days: 14
+    # 테스트에서는 토큰 파싱이 실제로 호출되지 않도록 TokenProvider를 목킹할 예정이므로 경로 무관
+    private-key-pem: classpath:keys/jwt-private.pem
+    public-key-pem: classpath:keys/jwt-public.pem

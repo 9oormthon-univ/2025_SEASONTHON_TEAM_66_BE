@@ -1,0 +1,10 @@
+# .dockerignore
+.git
+.gitignore
+.gradle
+build
+out
+**/*.iml
+.idea
+.env
+docker/*.local.*
